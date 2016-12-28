@@ -4,7 +4,7 @@ Spree::Order.class_eval do
     beanstalk = Beaneater.new('localhost:11300')
     tube = beanstalk.tubes["tube"]
 
-    Spree::Order.last.line_items.each do |li|
+    self.line_items.each do |li|
       tube.put({product_id: li.product.id, quantity: li.quantity}.to_json)
     end
 
