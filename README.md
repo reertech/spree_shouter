@@ -26,3 +26,15 @@ Introduction goes here.
   ```
 
 5. Restart your server
+
+## Testing
+
+1. Install the Bundle:
+  ```
+  bundle install
+  ```
+
+2. Run the tests:
+  ```
+  bundle exec rake
+  ```
