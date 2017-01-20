@@ -3,7 +3,7 @@ require 'spec_helper'
 describe Spree::Order do
   let(:product_id) { 777 }
   let(:quantity) { 3 }
-  let(:tube) { Class.new(Array) { alias :post :push }.new }
+  let(:tube) { Class.new(Array) { alias :put :push }.new }
 
   let(:almost_complete_order) {
     Spree::Order.new.tap do |order|
