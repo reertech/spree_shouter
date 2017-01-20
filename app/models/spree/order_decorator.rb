@@ -1,10 +1,10 @@
-require 'beaneater'
+require 'iron_mq'
 
 Spree::Order.class_eval do
   def decrease_quantity_in_core
     with_order_notification_tube do |tube|
       line_items.each do |li|
-        tube.put({ product_id: li.product.id, quantity: li.quantity }.to_json)
+        tube.post({ product_id: li.product.id, quantity: li.quantity }.to_json)
       end
     end
   end
@@ -13,13 +13,9 @@ Spree::Order.class_eval do
 
   # :nocov: external service invocation
   def with_order_notification_tube
-    beanstalk = Beaneater.new(ENV.fetch('ORDER_NOTIFICAION_BEANSTALKD_URL'))
-    begin
-      tube = beanstalk.tubes[ENV.fetch('ORDER_NOTIFICAION_TUBE')]
-      yield(tube)
-    ensure
-      beanstalk.close
-    end
+    ironmq = IronMQ::Client.new
+    queue = ironmq.queue('spree-order-notification')
+    yield(queue)
   end
   # :nocov:
 end
