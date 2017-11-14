@@ -2,17 +2,18 @@ require 'spec_helper'
 
 describe Spree::Order do
   let(:quantity) { 3 }
-  let(:tube) { Class.new(Array) { alias :put :push }.new }
   let(:product) { FactoryGirl.create(:product) }
+  let(:line_item) do
+    Spree::LineItem.new(
+      variant: FactoryGirl.create(:variant, product: product),
+      price: 117.20,
+      quantity: quantity,
+      currency: 'USD'
+    )
+  end
 
   let(:almost_complete_order) {
     Spree::Order.new.tap do |order|
-      line_item =
-        Spree::LineItem.new(
-          variant: FactoryGirl.create(:variant, product: product),
-          price: 117.20,
-          quantity: quantity,
-          currency: 'USD')
       line_item.inventory_units += 10.times.map { Spree::InventoryUnit.new }
 
       order.line_items << line_item
@@ -24,16 +25,30 @@ describe Spree::Order do
     end
   }
 
+  before do
+    ENV['RABBIT_HOST'] = 'amqp:host'
+    ENV['RABBIT_EXCHANGE'] = 'exchange'
+    ENV['RABBIT_ROUTING_KEY'] = 'routing_key'
+  end
+
   it 'should notify about purchase' do
-    allow(almost_complete_order).to receive(:with_order_notification_tube) do |&block|
-      block.(tube)
-    end
+    expect(almost_complete_order).to receive(:with_connection)
+      .with('amqp:host', 'exchange', 'routing_key')
 
     expect(almost_complete_order.next).to eq true
+  end
 
-    expect(tube).to eq [{
-      product_id: product.id,
-      quantity: quantity
-    }.to_json]
+  it 'should serialize order' do
+    expect(MQOrderSerializer.serialize(almost_complete_order)).to eq({
+      id: almost_complete_order.id,
+      line_items: [{
+        id: line_item.id,
+        product_id: product.id,
+        title: product.name,
+        quantity: quantity,
+        price: 117.2,
+        total: 351.6
+      }]
+    })
   end
 end
