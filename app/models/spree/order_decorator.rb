@@ -1,12 +1,4 @@
 Spree::Order.class_eval do
-  # def decrease_quantity_in_core
-  #   with_order_notification_tube do |tube|
-  #     line_items.each do |li|
-  #       tube.put({ product_id: li.product.id, quantity: li.quantity }.to_json)
-  #     end
-  #   end
-  # end
-
   def decrease_quantity_in_core
     rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
     return warn('You need to configure shouter') if rabbit_host.nil? || exchange.nil? || routing_key.nil?
@@ -17,17 +9,6 @@ Spree::Order.class_eval do
   end
 
   private
-
-  # # :nocov: external service invocation
-  # def with_order_notification_tube
-  #   rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
-  #   return warn('You need to configure shouter') if rabbit_host.nil? || exchange.nil? || routing_key.nil?
-  #
-  #   with_connection(rabbit_host, exchange, routing_key) do |connection|
-  #     yield(connection)
-  #   end
-  #   # send_payload(rabbit_host, exchange, routing_key, self)
-  # end
 
   def payload(order)
     MQOrderSerializer.serialize(order).to_json
@@ -41,15 +22,6 @@ Spree::Order.class_eval do
     exchange.publish(yield, routing_key: routing_key)
     connection.close
   end
-
-  # def send_payload(rabbit_host, exchange, routing_key, payload) # :nocov:
-  #   connection = Bunny.new(rabbit_host)
-  #   connection.start
-  #   channel  = connection.create_channel
-  #   exchange = channel.topic(exchange, durable: true)
-  #   exchange.publish("TY PIDR, BLEAT", routing_key: routing_key)
-  #   connection.close
-  # end
 end
 
 class MQOrderSerializer
