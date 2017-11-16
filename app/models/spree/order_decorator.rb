@@ -1,3 +1,5 @@
+require 'bunny'
+
 Spree::Order.class_eval do
   def decrease_quantity_in_core
     rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
