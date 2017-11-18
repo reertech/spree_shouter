@@ -34,7 +34,12 @@ Introduction goes here.
   bundle install
   ```
 
-2. Run the tests:
+2. Build dummy app:
+  ```
+  bundle exec rake test_app
+  ```
+
+3. Run the tests:
   ```
   bundle exec rake
   ```
