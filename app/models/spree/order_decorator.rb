@@ -21,7 +21,7 @@ Spree::Order.class_eval do
     connection.start
     channel  = connection.create_channel
     exchange = channel.topic(exchange, durable: true)
-    exchange.publish(yield, routing_key: routing_key)
+    exchange.publish(yield, routing_key: routing_key, persistent: true)
     connection.close
   end
 end
