@@ -41,6 +41,7 @@ describe Spree::Order do
   it 'should serialize order' do
     expect(MQOrderSerializer.serialize(almost_complete_order)).to eq({
       id: almost_complete_order.id,
+      shipping_total: 0.0,
       line_items: [{
         id: line_item.id,
         product_id: product.id,
