@@ -31,6 +31,7 @@ class MQOrderSerializer
     def serialize(order)
       {
         id: order.id,
+        total: order.total.to_f,
         shipping_total: order.shipment_total.to_f,
         line_items: order.line_items.map { |l| line_item(l) }
       }
