@@ -15,7 +15,6 @@ describe Spree::Order do
   let(:almost_complete_order) {
     Spree::Order.new.tap do |order|
       line_item.inventory_units += 10.times.map { Spree::InventoryUnit.new }
-
       order.line_items << line_item
       order.save!
 
@@ -41,6 +40,8 @@ describe Spree::Order do
   it 'should serialize order' do
     expect(MQOrderSerializer.serialize(almost_complete_order)).to eq({
       id: almost_complete_order.id,
+      shipping_total: 0.0,
+      total: 0.0,
       line_items: [{
         id: line_item.id,
         product_id: product.id,
