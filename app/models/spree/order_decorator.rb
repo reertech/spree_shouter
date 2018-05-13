@@ -12,9 +12,9 @@ Spree::Order.class_eval do
 
   def send_userinfo_to_crm
     host = ENV['CRM_HOST']
-    return warn('You need to configure shouter') if host.nil?
+    port = ENV['CRM_PORT'] || 80
+    return warn('Define CRM_HOST to environment variable to submit order information to CRM.') if host.nil?
     begin
-      port = 4000
       http = Net::HTTP.new(host, port)
 
       search_path = "/api/users?q=#{self.email}"
