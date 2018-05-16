@@ -25,8 +25,10 @@ Spree::Order.class_eval do
 
       path = "/api/users/#{user_id}?#{UserInfoSerializer.user_info_serializer(self).to_query}"
       response = http.send_request('PUT', path)
+      raise response.message unless response.code == '200'
       puts response.body
     rescue StandardError => e
+      Raven.capture_exception(e) if defined?(Raven)
       puts e.message
     end
   end
