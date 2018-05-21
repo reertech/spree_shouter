@@ -80,7 +80,9 @@ class UserInfoSerializer
   class << self
     def user_info_serializer(order)
       address = order.billing_address
-      full_address = "#{address.first_name} #{address.last_name} #{address.address1} #{address.address2} #{address.city} #{address.state.try(:name)} #{address.zipcode} #{address.country.try(:name)}".gsub(/\s+/, ' ')
+      full_address = [address.first_name, address.last_name, address.address1,
+        address.address2, address.city, address.state&.name, address.zipcode,
+        address.country&.name].reject(&:blank?).map(&:strip).join(' ')
       if user = order.user
         {
           email: user.email,
