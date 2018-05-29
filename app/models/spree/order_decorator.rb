@@ -25,8 +25,10 @@ Spree::Order.class_eval do
 
       path = "/api/users/#{user_id}?#{UserInfoSerializer.user_info_serializer(self).to_query}"
       response = http.send_request('PUT', path)
+      raise response.message unless response.code == '200'
       puts response.body
     rescue StandardError => e
+      Raven.capture_exception(e) if defined?(Raven)
       puts e.message
     end
   end
@@ -77,23 +79,27 @@ end
 class UserInfoSerializer
   class << self
     def user_info_serializer(order)
+      address = order.billing_address
+      full_address = [address.first_name, address.last_name, address.address1,
+        address.address2, address.city, address.state&.name, address.zipcode,
+        address.country&.name].reject(&:blank?).map(&:strip).join(' ')
       if user = order.user
         {
           email: user.email,
-          first_name: user.first_name ? user.first_name : order.billing_address.first_name,
-          last_name: user.last_name ? user.last_name : order.billing_address.last_name,
-          website_url: user.website_url,
-          google_plus_url: user.google_plus_url,
-          bio_info: user.bio_info,
+          first_name: user.first_name ? user.first_name : address.first_name,
+          last_name: user.last_name ? user.last_name : address.last_name,
+          phone: address.phone,
+          address: full_address,
           birthdate: user.birthdate.strftime('%Y-%m-%d'),
           anniversary_date: user.anniversary_date.strftime('%Y-%m-%d')
         }
       else
-        b_address = order.billing_address
         {
           email: order.email,
-          first_name: b_address.first_name,
-          last_name: b_address.last_name
+          first_name: address.first_name,
+          last_name: address.last_name,
+          phone: address.phone,
+          address: full_address
         }
       end
     end
