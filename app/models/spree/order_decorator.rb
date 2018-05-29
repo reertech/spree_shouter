@@ -86,8 +86,8 @@ class UserInfoSerializer
       if user = order.user
         {
           email: user.email,
-          first_name: user.first_name ? user.first_name : order.billing_address.first_name,
-          last_name: user.last_name ? user.last_name : order.billing_address.last_name,
+          first_name: user.first_name ? user.first_name : address.first_name,
+          last_name: user.last_name ? user.last_name : address.last_name,
           phone: address.phone,
           address: full_address,
           birthdate: user.birthdate.strftime('%Y-%m-%d'),
