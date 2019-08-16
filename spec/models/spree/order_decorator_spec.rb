@@ -2,10 +2,10 @@ require 'spec_helper'
 
 describe Spree::Order do
   let(:quantity) { 3 }
-  let(:product) { FactoryGirl.create(:product) }
+  let(:product) { FactoryBot.create(:product) }
   let(:line_item) do
     Spree::LineItem.new(
-      variant: FactoryGirl.create(:variant, product: product),
+      variant: FactoryBot.create(:variant, product: product),
       price: 117.20,
       quantity: quantity,
       currency: 'USD'

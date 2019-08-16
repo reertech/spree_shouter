@@ -1,7 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'spree'
-# Provides basic authentication functionality for testing parts of your engine
-gem 'spree_auth_devise'
+gem 'spree', '~> 3.2.7'
+gem 'spree_auth_devise', '~> 3.5'
 
 gemspec
