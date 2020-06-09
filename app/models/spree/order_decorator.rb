@@ -1,53 +1,57 @@
 require 'bunny'
 
-Spree::Order.class_eval do
-  def decrease_quantity_in_core
-    rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
-    return warn('You need to configure shouter') if rabbit_host.nil? || exchange.nil? || routing_key.nil?
+module Spree
+  module OrderDecorator
+    def decrease_quantity_in_core
+      rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
+      return warn('You need to configure shouter') if rabbit_host.nil? || exchange.nil? || routing_key.nil?
 
-    with_connection(rabbit_host, exchange, routing_key) do
-      payload(self)
+      with_connection(rabbit_host, exchange, routing_key) do
+        payload(self)
+      end
     end
-  end
 
-  def send_userinfo_to_crm
-    host = ENV['CRM_HOST']
-    port = ENV['CRM_PORT'] || 80
-    return warn('Define CRM_HOST to environment variable to submit order information to CRM.') if host.nil?
-    begin
-      http = Net::HTTP.new(host, port)
+    def send_userinfo_to_crm
+      host = ENV['CRM_HOST']
+      port = ENV['CRM_PORT'] || 80
+      return warn('Define CRM_HOST to environment variable to submit order information to CRM.') if host.nil?
+      begin
+        http = Net::HTTP.new(host, port)
 
-      search_path = "/api/users?q=#{self.email}"
-      search_response = http.send_request('GET', search_path)
+        search_path = "/api/users?q=#{self.email}"
+        search_response = http.send_request('GET', search_path)
 
-      json_response = JSON.parse(search_response.body)
-      user_id = (json_response.any? ? json_response.first['id'] : SecureRandom.uuid)
+        json_response = JSON.parse(search_response.body)
+        user_id = (json_response.any? ? json_response.first['id'] : SecureRandom.uuid)
 
-      path = "/api/users/#{user_id}?#{UserInfoSerializer.user_info_serializer(self).to_query}"
-      response = http.send_request('PUT', path)
-      raise response.message unless response.code == '200'
-      puts response.body
-    rescue StandardError => e
-      Raven.capture_exception(e) if defined?(Raven)
-      puts e.message
+        path = "/api/users/#{user_id}?#{UserInfoSerializer.user_info_serializer(self).to_query}"
+        response = http.send_request('PUT', path)
+        raise response.message unless response.code == '200'
+        puts response.body
+      rescue StandardError => e
+        Raven.capture_exception(e) if defined?(Raven)
+        puts e.message
+      end
     end
-  end
 
-  private
+    private
 
-  def payload(order)
-    MQOrderSerializer.serialize(order).to_json
-  end
+    def payload(order)
+      MQOrderSerializer.serialize(order).to_json
+    end
 
-  def with_connection(rabbit_host, exchange, routing_key) # :nocov: external service invocation
-    connection = Bunny.new(rabbit_host)
-    connection.start
-    channel  = connection.create_channel
-    exchange = channel.topic(exchange, durable: true)
-    exchange.publish(yield, routing_key: routing_key, persistent: true)
-    connection.close
+    def with_connection(rabbit_host, exchange, routing_key) # :nocov: external service invocation
+      connection = Bunny.new(rabbit_host)
+      connection.start
+      channel = connection.create_channel
+      exchange = channel.topic(exchange, durable: true)
+      exchange.publish(yield, routing_key: routing_key, persistent: true)
+      connection.close
+    end
   end
 end
+
+::Spree::Order.prepend(Spree::OrderDecorator)
 
 class MQOrderSerializer
   class << self
@@ -81,8 +85,8 @@ class UserInfoSerializer
     def user_info_serializer(order)
       address = order.billing_address
       full_address = [address.first_name, address.last_name, address.address1,
-        address.address2, address.city, address.state&.name, address.zipcode,
-        address.country&.name].reject(&:blank?).map(&:strip).join(' ')
+                      address.address2, address.city, address.state&.name, address.zipcode,
+                      address.country&.name].reject(&:blank?).map(&:strip).join(' ')
       if user = order.user
         {
           email: user.email,
