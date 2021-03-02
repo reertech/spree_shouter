@@ -3,6 +3,8 @@ require 'bunny'
 module Spree
   module OrderDecorator
     def decrease_quantity_in_core
+      with_https { payload(self) }
+
       rabbit_host, exchange, routing_key = ENV['RABBIT_HOST'], ENV['RABBIT_EXCHANGE'], ENV['RABBIT_ROUTING_KEY']
       return warn('You need to configure shouter') if rabbit_host.nil? || exchange.nil? || routing_key.nil?
 
@@ -40,13 +42,28 @@ module Spree
       MQOrderSerializer.serialize(order).to_json
     end
 
-    def with_connection(rabbit_host, exchange, routing_key) # :nocov: external service invocation
+    def with_connection(rabbit_host, exchange, routing_key)
+      # :nocov: external service invocation
       connection = Bunny.new(rabbit_host)
       connection.start
       channel = connection.create_channel
       exchange = channel.topic(exchange, durable: true)
       exchange.publish(yield, routing_key: routing_key, persistent: true)
       connection.close
+    end
+
+    def with_https
+      core_url = ENV['CORE_API_ORDERS_URL']
+      return warn('Define CORE_API_ORDERS_URL to environment variable to submit order information.') if core_url.nil?
+
+      response = Net::HTTP.post URI(core_url),
+                                yield,
+                                'Content-Type' => 'application/json'
+      raise response.message unless response.code == '200'
+      puts response.body
+    rescue StandardError => e
+      Raven.capture_exception(e) if defined?(Raven)
+      puts e.message
     end
   end
 end
